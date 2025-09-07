@@ -24,6 +24,6 @@ typedef signed int SINT32;
 
 typedef unsigned long long __int64;
 */
-#include"aw_nand_type.h"
+#include "../aw_nand_type.h"
 
 #endif

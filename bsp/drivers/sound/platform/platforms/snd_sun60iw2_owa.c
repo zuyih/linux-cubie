@@ -19,8 +19,8 @@
 #include <linux/device.h>
 #include <linux/regmap.h>
 
-#include "snd_sunxi_log.h"
-#include "snd_sunxi_owa.h"
+#include "../snd_sunxi_log.h"
+#include "../snd_sunxi_owa.h"
 
 struct sunxi_owa_clk {
 	/* parent clk */

@@ -17,7 +17,7 @@
 #include <linux/debugfs.h>
 #include <linux/slab.h>
 #include <sunxi-sid.h>
-#include "cedar_ve.h"
+#include "../cedar_ve.h"
 
 #define VE_REG_DEC_TOP_BASE	0X0000
 #define VE_REG_ENC_TOP_BASE	0X0800

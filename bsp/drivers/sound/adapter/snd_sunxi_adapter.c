@@ -12,7 +12,7 @@
  */
 
 #include "snd_sunxi_adapter.h"
-#include "snd_sunxi_log.h"
+#include "../platform/snd_sunxi_log.h"
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
 void sunxi_adpt_set_dai_ops(struct snd_soc_dai_driver *dai_drv, struct snd_soc_dai_ops *ops,

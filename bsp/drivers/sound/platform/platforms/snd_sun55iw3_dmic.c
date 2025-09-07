@@ -19,8 +19,8 @@
 #include <linux/device.h>
 #include <linux/regmap.h>
 
-#include "snd_sunxi_log.h"
-#include "snd_sunxi_dmic.h"
+#include "../snd_sunxi_log.h"
+#include "../snd_sunxi_dmic.h"
 
 struct sunxi_dmic_clk {
 	/* parent clk */

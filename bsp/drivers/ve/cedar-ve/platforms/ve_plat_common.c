@@ -19,7 +19,7 @@
 #include <asm/cacheflush.h>
 #include <sunxi-sid.h>
 
-#include "cedar_ve.h"
+#include "../cedar_ve.h"
 
 /* debugfs param */
 #define VE_DEBUGFS_MAX_CHANNEL	16

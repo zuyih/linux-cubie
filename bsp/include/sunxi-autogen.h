@@ -1,0 +1,1 @@
+#define AW_BSP_VERSION "555cfbe2cd, 2025-09-08 18:07:20, RadxaOS SDK"

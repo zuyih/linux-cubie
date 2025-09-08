@@ -107,6 +107,10 @@
 		};
 	};
 
+	chosen {
+		bootargs = "console=ttyAS0,115200n8 clk_ignore_unused root=/dev/mmcblk0p2 earlycon loglevel=8 consoleblank=0 initcall_debug=0 coherent_pool=2M irqchip.gicv3_pseudo_nmi=0 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory swapaccount=1 kasan=off";
+	};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;

@@ -87,7 +87,7 @@
 	};
 
 	chosen {
-		bootargs = "earlyprintk=sunxi-uart,0x2500000 loglevel=8 initcall_debug=0 console=ttyS0 init=/init";
+		bootargs = "console=ttyAS0,115200n8 clk_ignore_unused root=/dev/mmcblk0p2 earlycon loglevel=7 consoleblank=0 initcall_debug=0 coherent_pool=2M irqchip.gicv3_pseudo_nmi=0 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory swapaccount=1 kasan=off";
 		linux,initrd-start = <0x0 0x0>;
 		linux,initrd-end = <0x0 0x0>;
 		rng-seed;   /* This random value should be provided by bootloader */

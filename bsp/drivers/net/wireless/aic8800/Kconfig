@@ -14,7 +14,6 @@ config AIC8800_USB
 
 config AIC8800_SDIO
     bool "AIC8800 SDIO Support"
-    select PLATFORM_ALLWINNER
 endchoice
 
 config PLATFORM_ALLWINNER

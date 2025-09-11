@@ -1263,9 +1263,6 @@ CONFIG_RTW89_8852BE=n
 # Disable 8723cs
 CONFIG_RTL8723CS=n
 
-# Prefer aic8800 DKMS packages
-CONFIG_AIC_WLAN_SUPPORT=n
-
 # Disable BCMDHD
 CONFIG_BCMDHD=n
 # Allwinner bsp modules will fail to link if spinlock is inlined

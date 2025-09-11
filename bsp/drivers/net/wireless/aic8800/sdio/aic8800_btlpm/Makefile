@@ -1,4 +1,4 @@
-# CONFIG_AIC8800_BTLPM_SUPPORT = m
+CONFIG_AIC8800_BTLPM_SUPPORT = m
 
 obj-$(CONFIG_AIC8800_BTLPM_SUPPORT) := aic8800_btlpm.o
 
@@ -46,9 +46,7 @@ ccflags-$(CONFIG_PLATFORM_ALLWINNER) += -DCONFIG_PLATFORM_ALLWINNER
 KDIR  ?= /home/yaya/E/Allwinner/R818/R818/AndroidQ/lichee/kernel/linux-4.9/
 ARCH ?= arm64
 CROSS_COMPILE ?= /home/yaya/E/Allwinner/R818/R818/AndroidQ/android/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-
-ifeq ($(CONFIG_AIC8800_SDIO),)
 ccflags-y += -DANDROID_PLATFORM
-endif
 endif
 
 ifeq ($(CONFIG_PLATFORM_AMLOGIC), y)

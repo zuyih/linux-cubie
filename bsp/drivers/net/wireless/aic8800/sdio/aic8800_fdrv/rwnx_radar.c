@@ -1207,6 +1207,8 @@ bool dfs_pattern_detector_set_domain(struct dfs_pattern_detector *dpd,
 	dpd->num_radar_types = rt->num_radar_types;
 
 	dpd->region = region;
+
+	AICWFDBG(LOGINFO,"set_region %d \n",region);
 	return true;
 }
 
@@ -1268,6 +1270,8 @@ static void rwnx_radar_detected(struct rwnx_hw *rwnx_hw)
 {
 #ifdef CONFIG_RWNX_FULLMAC
 	struct cfg80211_chan_def chan_def;
+
+	RWNX_DBG(RWNX_FN_ENTRY_STR);
 
 	if (!rwnx_chanctx_valid(rwnx_hw, rwnx_hw->cur_chanctx)) {
 		WARN(1, "Radar detected without channel information");
@@ -1345,8 +1349,8 @@ static void rwnx_radar_process_pulse(struct work_struct *ws)
 			trace_radar_pulse(chain, p);
 #endif
 		if (dfs_pattern_detector_add_pulse(radar->dpd[chain], chain,
-								(s16)freq + p->freq, //(2 * p->freq),
-								p->rep, p->len/*(p->len * 2)*/, now)) {
+								(s16)freq + (2 * p->freq),
+								p->rep, (p->len * 2), now)) {
 
 				u16 idx = radar->detected[chain].index;
 
@@ -1400,7 +1404,11 @@ static void rwnx_radar_cac_work(struct work_struct *ws)
 					#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
 					   &ctxt->chan_def,
 					#endif
+					#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+					   NL80211_RADAR_CAC_FINISHED, GFP_KERNEL, 0);
+					#else
 					   NL80211_RADAR_CAC_FINISHED, GFP_KERNEL);
+					#endif
 	rwnx_send_apm_stop_cac_req(rwnx_hw, radar->cac_vif);
 	rwnx_chanctx_unlink(radar->cac_vif);
 
@@ -1500,7 +1508,11 @@ void rwnx_radar_cancel_cac(struct rwnx_radar *radar)
 						#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
 						   &ctxt->chan_def,
 						#endif
+						#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+						   NL80211_RADAR_CAC_ABORTED, GFP_KERNEL, 0);
+						#else
 						   NL80211_RADAR_CAC_ABORTED, GFP_KERNEL);
+						#endif
 		rwnx_chanctx_unlink(radar->cac_vif);
 	}
 

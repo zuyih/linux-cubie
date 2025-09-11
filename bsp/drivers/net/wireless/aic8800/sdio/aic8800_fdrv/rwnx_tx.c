@@ -107,7 +107,7 @@ void rwnx_ps_bh_enable(struct rwnx_hw *rwnx_hw, struct rwnx_sta *sta,
 		spin_unlock_bh(&rwnx_hw->tx_lock);
 
 		//if (sta->ps.pkt_ready[LEGACY_PS_ID])
-		//	rwnx_set_traffic_status(rwnx_hw, sta, true, LEGACY_PS_ID);
+			//srwnx_set_traffic_status(rwnx_hw, sta, true, LEGACY_PS_ID);
 
 		//if (sta->ps.pkt_ready[UAPSD_ID])
 		//	rwnx_set_traffic_status(rwnx_hw, sta, true, UAPSD_ID);
@@ -132,8 +132,8 @@ void rwnx_ps_bh_enable(struct rwnx_hw *rwnx_hw, struct rwnx_sta *sta,
 		rwnx_txq_sta_start(sta, RWNX_TXQ_STOP_STA_PS, rwnx_hw);
 		spin_unlock_bh(&rwnx_hw->tx_lock);
 
-		//if (sta->ps.pkt_ready[LEGACY_PS_ID])
-		//	rwnx_set_traffic_status(rwnx_hw, sta, false, LEGACY_PS_ID);
+		if (sta->ps.pkt_ready[LEGACY_PS_ID])
+			rwnx_set_traffic_status(rwnx_hw, sta, false, LEGACY_PS_ID);
 
 		//if (sta->ps.pkt_ready[UAPSD_ID])
 		//	rwnx_set_traffic_status(rwnx_hw, sta, false, UAPSD_ID);
@@ -332,6 +332,7 @@ u16 rwnx_select_txq(struct rwnx_vif *rwnx_vif, struct sk_buff *skb)
 		/* AP_VLAN interface is not used for a 4A STA,
 		   fallback searching sta amongs all AP's clients */
 		rwnx_vif = rwnx_vif->ap_vlan.master;
+		__attribute__((__fallthrough__));
 	case NL80211_IFTYPE_AP:
 	case NL80211_IFTYPE_P2P_GO:
 	{

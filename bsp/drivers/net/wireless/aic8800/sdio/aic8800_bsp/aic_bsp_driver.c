@@ -242,9 +242,12 @@ void rwnx_cmd_mgr_init(struct rwnx_cmd_mgr *cmd_mgr)
 
 void rwnx_cmd_mgr_deinit(struct rwnx_cmd_mgr *cmd_mgr)
 {
-	cmd_mgr->print(cmd_mgr);
-	cmd_mgr->drain(cmd_mgr);
-	cmd_mgr->print(cmd_mgr);
+	if(cmd_mgr->print)
+		cmd_mgr->print(cmd_mgr);
+	if(cmd_mgr->drain)
+		cmd_mgr->drain(cmd_mgr);
+	if(cmd_mgr->print)
+		cmd_mgr->print(cmd_mgr);
 	memset(cmd_mgr, 0, sizeof(*cmd_mgr));
 }
 
@@ -468,7 +471,11 @@ void rwnx_rx_handle_msg(struct aic_sdio_dev *sdiodev, struct ipc_e2a_msg *msg)
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
+#else
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+#endif
 #endif
 
 #define MD5(x) x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9],x[10],x[11],x[12],x[13],x[14],x[15]
@@ -1524,6 +1531,12 @@ int aicbt_patch_trap_data_load(struct aic_sdio_dev *sdiodev, struct aicbt_patch_
             printk("%s, aicbt_patch_info_unpack fail\n", __func__);
             return -1;
         }
+	} else if(sdiodev->chipid == PRODUCT_ID_AIC8800D80X2){
+        aicbt_patch_info_unpack(&patch_info, head);
+        if(patch_info.info_len == 0) {
+            printk("%s, aicbt_patch_info_unpack fail\n", __func__);
+            return -1;
+        }
 	}
 
 	if (rwnx_plat_bin_fw_upload_android(sdiodev, patch_info.addr_adid, aicbsp_firmware_list[aicbsp_info.cpmode].bt_adid))
@@ -1568,7 +1581,16 @@ static struct aicbt_info_t aicbt_info[]={
         .uart_flowctrl = AICBT_UART_FC_DEFAULT,
         .lpm_enable    = AICBT_LPM_ENABLE_DEFAULT,
         .txpwr_lvl     = AICBT_TXPWR_LVL_DEFAULT_8800d80,
-    }//PRODUCT_ID_AIC8800D80
+    },//PRODUCT_ID_AIC8800D80
+    {
+        .btmode        = AICBT_BTMODE_DEFAULT_8800d80x2,
+        .btport        = AICBT_BTPORT_DEFAULT,
+        .uart_baud     = AICBT_UART_BAUD_DEFAULT,
+        .uart_flowctrl = AICBT_UART_FC_DEFAULT,
+        .lpm_enable    = AICBT_LPM_ENABLE_DEFAULT,
+        .txpwr_lvl     = AICBT_TXPWR_LVL_DEFAULT_8800d80x2,
+    }//PRODUCT_ID_AIC8800D80x2
+
 };
 
 
@@ -2057,6 +2079,7 @@ int aicbsp_driver_fw_init(struct aic_sdio_dev *sdiodev)
             return -1;
 	}
 	else if(sdiodev->chipid == PRODUCT_ID_AIC8800D80X2){
+        btenable = 1;
 		if (rwnx_send_dbg_mem_read_req(sdiodev, mem_addr, &rd_mem_addr_cfm))
 			return -1;
 
@@ -2103,9 +2126,11 @@ int aicbsp_get_feature(struct aicbsp_feature_t *feature, char *fw_path)
 	if(fw_path != NULL){
 		sprintf(fw_path,"%s", AICBSP_FW_PATH);
 	}
+    
     sdio_dbg("%s, set FEATURE_SDIO_CLOCK %d MHz\n", __func__, feature->sdio_clock/1000000);
 	return 0;
 }
+
 EXPORT_SYMBOL_GPL(aicbsp_get_feature);
 
 #ifdef CONFIG_RESV_MEM_SUPPORT

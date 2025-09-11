@@ -38,6 +38,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/reboot.h>
+#include <linux/compat.h>
 
 #include "aic_btusb.h"
 
@@ -1156,7 +1157,7 @@ static int hci_recv_fragment(struct hci_dev *hdev, int type, void *data, int cou
 void hci_hardware_error(void)
 {
     struct sk_buff *aic_skb_copy = NULL;
-    int len = 3;
+    int len = 4;
     uint8_t hardware_err_pkt[4] = {HCI_EVENT_PKT, 0x10, 0x01, HCI_VENDOR_USB_DISC_HARDWARE_ERROR};
 
     aic_skb_copy = alloc_skb(len, GFP_ATOMIC);
@@ -1171,6 +1172,23 @@ void hci_hardware_error(void)
     wake_up_interruptible(&btchr_read_wait);
 }
 
+void hci_resume_hardware_error(void)
+{
+    struct sk_buff *aic_skb_copy = NULL;
+    int len = 4;
+    uint8_t hardware_err_pkt[4] = {HCI_EVENT_PKT, 0x10, 0x01, HCI_VENDOR_USB_RESUME_HARDWARE_ERROR};
+
+    aic_skb_copy = alloc_skb(len, GFP_ATOMIC);
+    if (!aic_skb_copy) {
+        AICBT_ERR("%s: Failed to allocate mem", __func__);
+        return;
+    }
+
+    memcpy(skb_put(aic_skb_copy, len), hardware_err_pkt, len);
+    aic_enqueue(aic_skb_copy);
+
+    wake_up_interruptible(&btchr_read_wait);
+}
 static int btchr_open(struct inode *inode_p, struct file  *file_p)
 {
     struct btusb_data *data;
@@ -1459,6 +1477,7 @@ static long btchr_ioctl(struct file *file_p,unsigned int cmd, unsigned long arg)
             return 1;
         case DWFW_CMPLT:
             AICBT_INFO(" btchr_ioctl DWFW_CMPLT");
+            __attribute__((__fallthrough__));
 #if 1
 	case SET_ISO_CFG:
             AICBT_INFO("btchr_ioctl SET_ISO_CFG");
@@ -1468,6 +1487,7 @@ static long btchr_ioctl(struct file *file_p,unsigned int cmd, unsigned long arg)
 		//hdev->voice_setting = *(uint16_t*)arg;
 		AICBT_INFO(" voice settings = %d", hdev->voice_setting);
 		//return 1;
+        __attribute__((__fallthrough__));
 #endif
         case GET_USB_INFO:
 			//ret = download_patch(fw_info,1);
@@ -1496,14 +1516,6 @@ static long btchr_ioctl(struct file *file_p,unsigned int cmd, unsigned long arg)
 
 }
 
-// #ifdef CONFIG_PLATFORM_UBUNTU//AIDEN
-// typedef u32		compat_uptr_t;
-// static inline void __user *compat_ptr(compat_uptr_t uptr)
-// {
-// 	return (void __user *)(unsigned long)uptr;
-// }
-// #endif
-
 #ifdef CONFIG_COMPAT
 static long compat_btchr_ioctl (struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -1527,7 +1539,9 @@ static int btchr_init(void)
 {
     int res = 0;
     struct device *dev;
-
+#ifdef CONFIG_PLATFORM_MTK_LINUX
+    bt_devid = MKDEV(111, 0);
+#endif
     AICBT_INFO("Register usb char device interface for BT driver");
     /*
      * btchr mutex is used to sync between
@@ -1540,13 +1554,20 @@ static int btchr_init(void)
     init_waitqueue_head(&btchr_read_wait);
     init_waitqueue_head(&bt_dlfw_wait);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
+    bt_char_class = class_create(BT_CHAR_DEVICE_NAME);
+#else
     bt_char_class = class_create(THIS_MODULE, BT_CHAR_DEVICE_NAME);
+#endif
     if (IS_ERR(bt_char_class)) {
         AICBT_ERR("Failed to create bt char class");
         return PTR_ERR(bt_char_class);
     }
-
+#ifndef CONFIG_PLATFORM_MTK_LINUX
     res = alloc_chrdev_region(&bt_devid, 0, 1, BT_CHAR_DEVICE_NAME);
+#else
+	res = register_chrdev_region(bt_devid, 1, BT_CHAR_DEVICE_NAME);
+#endif
     if (res < 0) {
         AICBT_ERR("Failed to allocate bt char device");
         goto err_alloc;
@@ -1700,6 +1721,7 @@ int set_bt_wakeup_param(firmware_info *fw_info)
     wakeup_param->gpio_num[1] = 3;////default select gpiob2 for fw_wakeup_host
     wakeup_param->gpio_dft_lvl[1] = 1;////0:defalut pull down,  1:default pull up
     /********************************************************************/
+    /********************************************************************/
     //MAX_AD_FILTER_NUM=5 :num 0
     {
         const uint8_t data[11] = {0x59,0x4B,0x32,0x42,0x41,0x5F,0x54,0x45,0x53,0x54,0x33};
@@ -1709,7 +1731,17 @@ int set_bt_wakeup_param(firmware_info *fw_info)
         wakeup_param->ad_filter[0].ad_data_mask = 0xffe00000;
         wakeup_param->ad_filter[0].ad_role = ROLE_COMBO|(COMBO_0<<4);
         wakeup_param->ad_filter[0].gpio_trigger_idx = TG_IDX_0;//0: match for wakeup_param->gpio_num[0]       1: match for wakeup_param->gpio_num[1]
-    }
+		/********************************************************************/
+		/*enable white list addr for paired remote ble addr. if all 0: all addr will use ad filter
+												wl_addr have value xx: only remote addr in white_list_addr will use ad filter
+		********************************************************************/
+		wakeup_param->ad_filter[0].wl_addr.addr[0] = 0;
+		wakeup_param->ad_filter[0].wl_addr.addr[1] = 0;
+		wakeup_param->ad_filter[0].wl_addr.addr[2] = 0;
+		wakeup_param->ad_filter[0].wl_addr.addr[3] = 0;
+		wakeup_param->ad_filter[0].wl_addr.addr[4] = 0;
+		wakeup_param->ad_filter[0].wl_addr.addr[5] = 0;
+	}
     /********************************************************************/
     //MAX_AD_FILTER_NUM=5 :num 1
     {
@@ -1720,7 +1752,17 @@ int set_bt_wakeup_param(firmware_info *fw_info)
         wakeup_param->ad_filter[1].ad_data_mask = 0xc0000000;
         wakeup_param->ad_filter[1].ad_role = ROLE_COMBO|(COMBO_0<<4);
         wakeup_param->ad_filter[1].gpio_trigger_idx = TG_IDX_0;//0: match for wakeup_param->gpio_num[0]       1: match for wakeup_param->gpio_num[1]
-    }
+		/********************************************************************/
+		/*enable white list addr for paired remote ble addr. if all 0: all addr will use ad filter
+												wl_addr have value xx: only remote addr in white_list_addr will use ad filter
+		********************************************************************/
+		wakeup_param->ad_filter[1].wl_addr.addr[0] = 0;
+		wakeup_param->ad_filter[1].wl_addr.addr[1] = 0;
+		wakeup_param->ad_filter[1].wl_addr.addr[2] = 0;
+		wakeup_param->ad_filter[1].wl_addr.addr[3] = 0;
+		wakeup_param->ad_filter[1].wl_addr.addr[4] = 0;
+		wakeup_param->ad_filter[1].wl_addr.addr[5] = 0;
+	}
     /********************************************************************/
     //MAX_AD_FILTER_NUM=5 :num 2
     {
@@ -1731,7 +1773,17 @@ int set_bt_wakeup_param(firmware_info *fw_info)
         wakeup_param->ad_filter[2].ad_data_mask = 0;
         wakeup_param->ad_filter[2].ad_role = ROLE_ONLY;
         wakeup_param->ad_filter[2].gpio_trigger_idx = TG_IDX_0;//0: match for wakeup_param->gpio_num[0]       1: match for wakeup_param->gpio_num[1]
-    }
+		/********************************************************************/
+		/*enable white list addr for paired remote ble addr. if all 0: all addr will use ad filter
+												wl_addr have value xx: only remote addr in white_list_addr will use ad filter
+		********************************************************************/
+		wakeup_param->ad_filter[2].wl_addr.addr[0] = 0;
+		wakeup_param->ad_filter[2].wl_addr.addr[1] = 0;
+		wakeup_param->ad_filter[2].wl_addr.addr[2] = 0;
+		wakeup_param->ad_filter[2].wl_addr.addr[3] = 0;
+		wakeup_param->ad_filter[2].wl_addr.addr[4] = 0;
+		wakeup_param->ad_filter[2].wl_addr.addr[5] = 0;
+	}
     /********************************************************************/
     //MAX_AD_FILTER_NUM=5 :num 3
     {
@@ -1742,21 +1794,40 @@ int set_bt_wakeup_param(firmware_info *fw_info)
         wakeup_param->ad_filter[3].ad_data_mask = 0;
         wakeup_param->ad_filter[3].ad_role = ROLE_COMBO|(COMBO_1<<4);
         wakeup_param->ad_filter[3].gpio_trigger_idx = TG_IDX_0;//0: match for wakeup_param->gpio_num[0]       1: match for wakeup_param->gpio_num[1]
-    }
+		/********************************************************************/
+		/*enable white list addr for paired remote ble addr. if all 0: all addr will use ad filter
+												wl_addr have value xx: only remote addr in white_list_addr will use ad filter
+		********************************************************************/
+		wakeup_param->ad_filter[3].wl_addr.addr[0] = 0;
+		wakeup_param->ad_filter[3].wl_addr.addr[1] = 0;
+		wakeup_param->ad_filter[3].wl_addr.addr[2] = 0;
+		wakeup_param->ad_filter[3].wl_addr.addr[3] = 0;
+		wakeup_param->ad_filter[3].wl_addr.addr[4] = 0;
+		wakeup_param->ad_filter[3].wl_addr.addr[5] = 0;
+	}
+	#if 0
     /********************************************************************/
     //MAX_AD_FILTER_NUM=5 :num 4
     {
-        //const uint8_t data[11] = {0x59,0x4B,0x32,0x42,0x41,0x5F,0x54,0x45,0x53,0x54,0x33};
+        const uint8_t data[11] = {0x59,0x4B,0x32,0x42,0x41,0x5F,0x54,0x45,0x53,0x54,0x33};
         wakeup_param->ad_filter[4].ad_len = 0;
         wakeup_param->ad_filter[4].ad_type = 0x09;
         //memcpy(wakeup_param->ad_filter[4].ad_data, data,wakeup_param->ad_filter[4].ad_len-1);// 1111 1111 1110 0000 0000 0000 0000 0000 //0xffe00000
         wakeup_param->ad_filter[4].ad_data_mask = 0xffe00000;
         wakeup_param->ad_filter[4].ad_role = ROLE_COMBO|(COMBO_1<<4);
         wakeup_param->ad_filter[4].gpio_trigger_idx = TG_IDX_0|TG_IDX_1;//0: match for wakeup_param->gpio_num[0]       1: match for wakeup_param->gpio_num[1]
-    }
-
-
-
+		/********************************************************************/
+		/*enable white list addr for paired remote ble addr. if all 0: all addr will use ad filter
+												wl_addr have value xx: only remote addr in white_list_addr will use ad filter
+		********************************************************************/
+		wakeup_param->ad_filter[4].wl_addr.addr[0] = 0;
+		wakeup_param->ad_filter[4].wl_addr.addr[1] = 0;
+		wakeup_param->ad_filter[4].wl_addr.addr[2] = 0;
+		wakeup_param->ad_filter[4].wl_addr.addr[3] = 0;
+		wakeup_param->ad_filter[4].wl_addr.addr[4] = 0;
+		wakeup_param->ad_filter[4].wl_addr.addr[5] = 0;
+	}
+	#endif
     fw_info->cmd_hdr->opcode = cpu_to_le16(HCI_VSC_SET_ADFILTER_PT_CMD);
     fw_info->cmd_hdr->plen = sizeof(struct ble_wakeup_param_t);
     fw_info->pkt_len = CMD_HDR_LEN + sizeof(struct ble_wakeup_param_t);
@@ -2341,7 +2412,7 @@ struct aicbsp_info_t aicbsp_info = {
 
 char aic_fw_path[FW_PATH_MAX];
 #if (CONFIG_BLUEDROID == 0)
-static const char* aic_default_fw_path = "/lib/firmware/aic8800DC";
+static const char* aic_default_fw_path = "/lib/firmware/aic8800_fw/USB/aic8800DC";
 #else
 static const char* aic_default_fw_path = "/vendor/etc/firmware";
 #endif
@@ -5317,6 +5388,7 @@ static int btusb_resume(struct usb_interface *intf)
     }
     #ifdef CONFIG_BT_WAKEUP_IN_PM
     reset_bt_from_wakeup_process(data->fw_info);
+	hci_resume_hardware_error();
     #endif
 
     #if 1
@@ -5425,7 +5497,11 @@ module_param(mp_drv_mode, int, 0644);
 MODULE_PARM_DESC(mp_drv_mode, "0: NORMAL; 1: MP MODE");
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
+#else
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+#endif
 #endif
 
 MODULE_AUTHOR("AicSemi Corporation");

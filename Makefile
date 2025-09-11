@@ -555,6 +555,9 @@ export RCS_FIND_IGNORE := \( -name SCCS -o -name BitKeeper -o -name .svn -o    \
 export RCS_TAR_IGNORE := --exclude SCCS --exclude BitKeeper --exclude .svn \
 			 --exclude CVS --exclude .pc --exclude .hg --exclude .git
 
+export LICHEE_KERN_DIR=$(srctree)/
+export BSP_TOP=$(srctree)/bsp/
+
 # ===========================================================================
 # Rules shared between *config targets and build targets
 

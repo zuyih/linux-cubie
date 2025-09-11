@@ -697,11 +697,6 @@ CONFIG_NET_VENDOR_WIZNET=y
 CONFIG_WIZNET_W5100=m
 CONFIG_WIZNET_W5100_SPI=m
 
-# Compress and decompress kernel modules
-CONFIG_MODULE_COMPRESS=y
-CONFIG_MODULE_COMPRESS_XZ=y
-CONFIG_MODULE_DECOMPRESS=y
-
 # https://github.com/radxa/kernel/pull/32
 # Enable nf_tables & BPF
 CONFIG_NF_TABLES=m

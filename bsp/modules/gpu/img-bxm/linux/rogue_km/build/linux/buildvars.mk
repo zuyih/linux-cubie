@@ -51,7 +51,7 @@
 
 # These flags are used for kernel, User C and User C++
 #
-COMMON_FLAGS := -W -Wall
+COMMON_FLAGS := -W -Wall -Wno-error=type-limits -Wno-error=missing-field-initializers
 
 # Enable 64-bit file & memory handling on 32-bit systems.
 #

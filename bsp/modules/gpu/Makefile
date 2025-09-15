@@ -25,7 +25,7 @@ KERNEL_OUT_DIR := $(O)
 # Re-setup it
 KERNEL_SRC_DIR := $(word 1, $(KERNEL_SRC_DIR) $(KERNEL_SRC))
 KERNEL_OUT_DIR := $(word 1, $(KERNEL_OUT_DIR) $(KERNEL_SRC_DIR))
-CONFIG_OS_TYPE := $(word 1, $(CONFIG_OS_TYPE) android)
+CONFIG_OS_TYPE := $(word 1, $(CONFIG_OS_TYPE) linux)
 
 ifeq ($(KERNEL_SRC_DIR),)
   $(error KERNEL_SRC_DIR not setup)
